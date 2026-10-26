@@ -38,7 +38,9 @@ self.addEventListener("fetch", e => {
   e.respondWith((async () => {
     const c = await caches.open(CACHE);
     try {
-      const net = await Promise.race([fetch(req), new Promise((_, no) => setTimeout(() => no(0), 4000))]);
+      /* "no-cache" makes the iPad check GitHub for a newer copy every time instead of reusing one for up to 10 minutes */
+      const net = await Promise.race([fetch(req.url, { cache: "no-cache", credentials: "same-origin" }),
+                                      new Promise((_, no) => setTimeout(() => no(0), 4000))]);
       if (net && net.ok) c.put(req, net.clone());
       return net;
     } catch (err) {

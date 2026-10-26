@@ -162,7 +162,7 @@
     .strip .sc { flex: none; width: auto; margin: 0; padding: 9px 12px; font-size: 14.5px; white-space: nowrap; }
     .mainIn { padding: 20px 20px 36px; max-width: none; }
   }
-  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  @media (prefers-reduced-motion: reduce) { *:not(#mainIn) { transition: none !important; } }
 </style>
 </head>
 <body>
@@ -384,9 +384,10 @@ const mainEl = document.getElementById("main");
 let sx = 0, sy = 0, st = 0, tracking = false, swipedAt = 0;
 function goTo(n, dir) {
   state.cur = n; save(); render(); mainEl.scrollTop = 0;
-  if (dir && !matchMedia("(prefers-reduced-motion: reduce)").matches)
-    document.getElementById("mainIn").animate(
-      [{ transform: `translateX(${dir * 48}px)`, opacity: 0 }, { transform: "none", opacity: 1 }],
+  if (dir) document.getElementById("mainIn").animate(
+      matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? [{ opacity: 0 }, { opacity: 1 }]
+        : [{ transform: `translateX(${dir * 48}px)`, opacity: 0 }, { transform: "none", opacity: 1 }],
       { duration: 220, easing: "cubic-bezier(.2, .8, .2, 1)" });
 }
 /* The page follows your finger while swiping; let go past ~90 px (or flick) to change section */
@@ -416,16 +417,16 @@ mainEl.addEventListener("touchmove", e => {
   }
   if (e.cancelable) e.preventDefault();
   const n = state.cur + (dx < 0 ? 1 : -1), can = n >= 0 && n < SECTIONS.length;
-  if (!reduceMotion.matches) setX(can ? dx * 0.6 : dx * 0.18, can ? 1 - Math.min(Math.abs(dx) / 900, .35) : 1);
+  setX(can ? dx * 0.6 : dx * 0.18, can ? 1 - Math.min(Math.abs(dx) / 900, .35) : 1);
 }, { passive: false });
 mainEl.addEventListener("touchend", () => {
   if (!tracking || lock !== "h") { tracking = false; return; }
   tracking = false; swipedAt = Date.now();
   const dir = dx < 0 ? 1 : -1, n = state.cur + dir, speed = Math.abs(dx) / Math.max(Date.now() - st, 1);
   if (n < 0 || n >= SECTIONS.length || !(Math.abs(dx) > 90 || (speed > 0.45 && Math.abs(dx) > 30))) { springBack(); return; }
-  if (reduceMotion.matches) { goTo(n, 0); return; }
   const el = inner(); el.style.transition = "transform .13s ease-in, opacity .13s ease-in";
-  setX(-dir * Math.min(innerWidth * 0.35, 260), 0);
+  if (reduceMotion.matches) el.style.opacity = 0;          /* Reduce Motion on: fade instead of slide */
+  else setX(-dir * Math.min(innerWidth * 0.35, 260), 0);
   setTimeout(() => { el.style.transition = ""; setX(0, null); goTo(n, dir); }, 130);
 });
 mainEl.addEventListener("touchcancel", () => { if (tracking && lock === "h") springBack(); tracking = false; });

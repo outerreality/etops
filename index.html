@@ -162,7 +162,6 @@
     .strip .sc { flex: none; width: auto; margin: 0; padding: 9px 12px; font-size: 14.5px; white-space: nowrap; }
     .mainIn { padding: 20px 20px 36px; max-width: none; }
   }
-  @media (prefers-reduced-motion: reduce) { *:not(#mainIn) { transition: none !important; } }
 </style>
 </head>
 <body>
@@ -385,13 +384,11 @@ let sx = 0, sy = 0, st = 0, tracking = false, swipedAt = 0;
 function goTo(n, dir) {
   state.cur = n; save(); render(); mainEl.scrollTop = 0;
   if (dir) document.getElementById("mainIn").animate(
-      matchMedia("(prefers-reduced-motion: reduce)").matches
-        ? [{ opacity: 0 }, { opacity: 1 }]
-        : [{ transform: `translateX(${dir * 48}px)`, opacity: 0 }, { transform: "none", opacity: 1 }],
+      [{ transform: `translateX(${dir * 48}px)`, opacity: 0 }, { transform: "none", opacity: 1 }],
       { duration: 220, easing: "cubic-bezier(.2, .8, .2, 1)" });
 }
 /* The page follows your finger while swiping; let go past ~90 px (or flick) to change section */
-const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
+const reduceMotion = { matches: false };   /* always use full animations, even with the iPad's Reduce Motion on */
 let lock = null, dx = 0;
 const inner = () => document.getElementById("mainIn");
 function setX(x, o) { const el = inner(); el.style.transform = x ? `translateX(${x}px)` : ""; el.style.opacity = o == null ? "" : o; }

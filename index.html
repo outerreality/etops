@@ -379,7 +379,34 @@ async function hfLoad() {
 let armTimer = null;
 function disarm() { document.querySelectorAll(".btn.arm").forEach(b => { b.classList.remove("arm"); b.textContent = b.dataset.label; }); }
 
+/* ---------- Swipe left/right on the checklist to change sections ---------- */
+const mainEl = document.getElementById("main");
+let sx = 0, sy = 0, st = 0, tracking = false, swipedAt = 0;
+function goTo(n, dir) {
+  state.cur = n; save(); render(); mainEl.scrollTop = 0;
+  if (dir && !matchMedia("(prefers-reduced-motion: reduce)").matches)
+    document.getElementById("mainIn").animate(
+      [{ transform: `translateX(${dir * 48}px)`, opacity: 0 }, { transform: "none", opacity: 1 }],
+      { duration: 220, easing: "cubic-bezier(.2, .8, .2, 1)" });
+}
+mainEl.addEventListener("touchstart", e => {
+  tracking = e.touches.length === 1 && !document.getElementById("viewer").classList.contains("open") &&
+             !(window.visualViewport && visualViewport.scale > 1.05);
+  if (!tracking) return;
+  sx = e.touches[0].clientX; sy = e.touches[0].clientY; st = Date.now();
+}, { passive: true });
+mainEl.addEventListener("touchmove", e => { if (e.touches.length > 1) tracking = false; }, { passive: true });
+mainEl.addEventListener("touchend", e => {
+  if (!tracking) return; tracking = false;
+  const t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy;
+  if (Date.now() - st > 700 || Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.8) return;   /* not a clear sideways swipe */
+  const n = state.cur + (dx < 0 ? 1 : -1);
+  if (n < 0 || n >= SECTIONS.length) return;
+  swipedAt = Date.now(); goTo(n, dx < 0 ? 1 : -1);
+}, { passive: true });
+
 document.addEventListener("click", e => {
+  if (Date.now() - swipedAt < 400) return;   /* ignore the tap that ends a swipe */
   const b = e.target.closest("button"); if (!b) return;
   if (b.dataset.hf) { hfLoad(); return; }
   if (b.dataset.img !== undefined) {
@@ -399,8 +426,7 @@ document.addEventListener("click", e => {
     return;
   }
   if (b.dataset.sec !== undefined) {
-    state.cur = +b.dataset.sec; save(); render();
-    document.getElementById("main").scrollTop = 0; window.scrollTo(0, 0);
+    goTo(+b.dataset.sec, 0); window.scrollTo(0, 0);
     return;
   }
   if (b.dataset.reset) {
